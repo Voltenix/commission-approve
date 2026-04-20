@@ -163,6 +163,7 @@
     pack:     p.get('pack')     || '',
     title:    p.get('title')    || '',
     contact:  p.get('contact')  || '',
+    discord:  p.get('discord')  || '',
     price:    p.get('price')    || '',
     format:   p.get('format')   || '—',
     cadrage:  p.get('cadrage')  || '—',
@@ -228,7 +229,8 @@
       + '<div class="pack-title">' + (data.title !== '(sans titre)' ? data.title : '') + '</div></div>'
       + '</div>'
       + '<div class="details-grid">'
-      + detailRow('Contact', data.contact || '—', false)
+      + detailRow('Email', data.contact || '—', false)
+      + (data.discord ? detailRow('Discord', data.discord, false) : '')
       + detailRow('Prix estim\u00e9', data.price, false)
       + detailRow('Format', data.format, false)
       + detailRow('Cadrage', data.cadrage, false)
@@ -307,7 +309,9 @@
     doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(130,120,180);
     doc.text('POUR', 20, y); y += 5;
     doc.setFont('helvetica', 'normal'); doc.setTextColor(30,20,60);
-    doc.text(data.contact || '—', 20, y); y += 12;
+    doc.text(data.contact || '—', 20, y); y += 6;
+    if (data.discord) { doc.setFontSize(8); doc.setTextColor(100,90,160); doc.text('Discord : ' + data.discord, 20, y); doc.setFontSize(9); doc.setTextColor(30,20,60); y += 6; }
+    y += 6;
 
     /* Separator */
     doc.setDrawColor(200, 195, 240); doc.setLineWidth(0.3);
@@ -403,8 +407,8 @@
 
     sendPromise.then(function() {
       var msg = clientIsEmail
-        ? '&#10003; Commission approuv\u00e9e \u2014 email envoy\u00e9 \u00e0 <strong>' + data.contact + '</strong>. G\u00e9n\u00e9rez le PDF ci-dessus si ce n\u2019est pas d\u00e9j\u00e0 fait.'
-        : '&#10003; Commission approuv\u00e9e. Contact Discord/autre\u00a0: <strong>' + data.contact + '</strong> \u2014 contactez manuellement avec la facture PDF.';
+        ? '&#10003; Commission approuv\u00e9e \u2014 email envoy\u00e9 \u00e0 <strong>' + data.contact + '</strong>' + (data.discord ? ' (Discord\u00a0: ' + data.discord + ')' : '') + '. G\u00e9n\u00e9rez le PDF ci-dessus si ce n\u2019est pas d\u00e9j\u00e0 fait.'
+        : '&#10003; Commission approuv\u00e9e. Email\u00a0: <strong>' + data.contact + '</strong>' + (data.discord ? ' \u00b7 Discord\u00a0: <strong>' + data.discord + '</strong>' : '') + ' \u2014 contactez manuellement avec la facture PDF.';
       showStatus('success', msg);
       btnApprove.textContent = '\u2713 Approuv\u00e9e';
       if (!currentInvoiceNum) generatePDF();
