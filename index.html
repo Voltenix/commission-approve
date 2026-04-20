@@ -159,18 +159,34 @@
   }
 
   var p = new URLSearchParams(window.location.search);
-  var data = {
+  var isPreview = p.get('preview') === '1';
+  var data = isPreview ? {
+    pack:     'Portrait Digital',
+    title:    'Elara, Guerri\u00e8re des Sables',
+    contact:  'client@exemple.com',
+    discord:  'elara#1234',
+    price:    '~ 480 \u20ac',
+    format:   'Portrait 3:4',
+    cadrage:  'Plan serr\u00e9 (buste)',
+    bg:       'D\u00e9cor simple',
+    persos:   '1',
+    deadline: 'Standard (3\u20135 sem.)',
+    license:  'Personnel',
+    nda:      'Non',
+    drive:    'https://drive.google.com/test',
+    desc:     'Personnage f\u00e9minin avec armure dor\u00e9e et cape rouge. Expression d\u00e9termin\u00e9e, regard vers la droite. Arri\u00e8re-plan d\u00e9sertique au coucher du soleil.'
+  } : {
     pack:     p.get('pack')     || '',
     title:    p.get('title')    || '',
     contact:  p.get('contact')  || '',
     discord:  p.get('discord')  || '',
     price:    p.get('price')    || '',
-    format:   p.get('format')   || '—',
-    cadrage:  p.get('cadrage')  || '—',
-    bg:       p.get('bg')       || '—',
+    format:   p.get('format')   || '\u2014',
+    cadrage:  p.get('cadrage')  || '\u2014',
+    bg:       p.get('bg')       || '\u2014',
     persos:   p.get('persos')   || '1',
-    deadline: p.get('deadline') || '—',
-    license:  p.get('license')  || '—',
+    deadline: p.get('deadline') || '\u2014',
+    license:  p.get('license')  || '\u2014',
     nda:      p.get('nda')      || 'Non',
     drive:    p.get('drive')    || '',
     desc:     p.get('desc')     || ''
@@ -212,7 +228,7 @@
   }
 
   function render() {
-    if (!data.pack) {
+    if (!data.pack && !isPreview) {
       document.getElementById('mainContent').innerHTML =
         '<div class="card invalid-card"><div class="icon">&#10060;</div><h1>Lien invalide</h1><p>Les donn\u00e9es sont manquantes ou le lien a expir\u00e9.</p></div>';
       return;
@@ -251,9 +267,9 @@
       + '<div class="invoice-label">Num\u00e9ro de facture</div>'
       + '<div class="invoice-num" id="invoiceNumDisplay">' + previewNum + '</div>'
       + '</div>'
-      + '<div>'
-      + '<div class="invoice-price-note">Estimation</div>'
-      + '<div class="invoice-price">' + data.price + '</div>'
+      + '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">'
+      + '<div class="invoice-price-note">Prix final</div>'
+      + '<input id="finalPrice" type="text" value="' + data.price.replace(/~/g,'').trim() + '" style="background:rgba(255,255,255,0.07);border:1px solid rgba(167,139,250,0.35);border-radius:8px;color:#fff;font-size:22px;font-weight:800;font-family:inherit;text-align:right;padding:4px 10px;width:160px;outline:none;" />'
       + '</div>'
       + '</div>'
       + '</div>'
@@ -270,120 +286,141 @@
 
   function generatePDF() {
     var invoiceNum = getInvoiceNumber();
-    document.getElementById('invoiceNumDisplay').textContent = invoiceNum;
+    var numDisplay = document.getElementById('invoiceNumDisplay');
+    if (numDisplay) numDisplay.textContent = invoiceNum;
 
     var doc = new window.jspdf.jsPDF({ unit:'mm', format:'a4' });
     var W = 210, H = 297;
     var today = new Date();
     var dateStr = today.toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric' });
+    var dueDate = new Date(today); dueDate.setDate(dueDate.getDate() + 30);
+    var dueDateStr = dueDate.toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric' });
 
-    /* ── Header band ── */
-    doc.setFillColor(26, 21, 53);
-    doc.rect(0, 0, W, 38, 'F');
-    doc.setFontSize(18); doc.setFont('helvetica', 'bold'); doc.setTextColor(255,255,255);
-    doc.text('BOBE FLORIAN', 20, 18);
-    doc.setFontSize(9); doc.setFont('helvetica', 'normal'); doc.setTextColor(167,139,250);
-    doc.text('Digital Artist  \u2022  contact@bobeflorian.com', 20, 26);
-    doc.setFontSize(9); doc.setTextColor(180,180,200);
-    doc.text('www.bobeflorian.com', 20, 32);
+    var sep  = function(yy) { doc.setDrawColor(210,205,245); doc.setLineWidth(0.25); doc.line(20, yy, W-20, yy); };
+    var secH = function(label, yy) {
+      doc.setFontSize(7.5); doc.setFont('helvetica','bold'); doc.setTextColor(130,120,180);
+      doc.text(label, 20, yy);
+    };
 
-    /* Invoice label top-right */
-    doc.setFontSize(22); doc.setFont('helvetica', 'bold'); doc.setTextColor(255,255,255);
-    doc.text('FACTURE', W - 20, 18, { align:'right' });
-    doc.setFontSize(10); doc.setFont('helvetica', 'normal'); doc.setTextColor(167,139,250);
-    doc.text(invoiceNum, W - 20, 26, { align:'right' });
-    doc.setTextColor(180,180,200);
-    doc.text(dateStr, W - 20, 32, { align:'right' });
+    /* ── HEADER ── */
+    doc.setFillColor(26, 21, 53); doc.rect(0, 0, W, 40, 'F');
+    doc.setFontSize(20); doc.setFont('helvetica','bold'); doc.setTextColor(255,255,255);
+    doc.text('BOBE FLORIAN', 20, 17);
+    doc.setFontSize(8.5); doc.setFont('helvetica','normal'); doc.setTextColor(167,139,250);
+    doc.text('Digital Artist  \u2022  contact@bobeflorian.com  \u2022  www.bobeflorian.com', 20, 25);
+    doc.setFontSize(7.5); doc.setTextColor(160,150,200);
+    doc.text('SIRET 907 494 173 00020', 20, 32);
 
-    var y = 52;
+    doc.setFontSize(20); doc.setFont('helvetica','bold'); doc.setTextColor(255,255,255);
+    doc.text('DEVIS', W-20, 17, { align:'right' });
+    doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(167,139,250);
+    doc.text(invoiceNum, W-20, 25, { align:'right' });
+    doc.setTextColor(160,150,200);
+    doc.text(dateStr, W-20, 32, { align:'right' });
 
-    /* Status badge */
-    doc.setFillColor(217, 119, 6, 0.15);
-    doc.setDrawColor(217, 119, 6);
-    doc.roundedRect(20, y - 6, 50, 9, 2, 2, 'FD');
-    doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(217,119,6);
-    doc.text('LISTE D\'ATTENTE', 45, y - 0.5, { align:'center' });
-    y += 10;
+    var y = 50;
 
-    /* For block */
-    doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(130,120,180);
-    doc.text('POUR', 20, y); y += 5;
-    doc.setFont('helvetica', 'normal'); doc.setTextColor(30,20,60);
-    doc.text(data.contact || '—', 20, y); y += 6;
-    if (data.discord) { doc.setFontSize(8); doc.setTextColor(100,90,160); doc.text('Discord : ' + data.discord, 20, y); doc.setFontSize(9); doc.setTextColor(30,20,60); y += 6; }
-    y += 6;
+    /* ── FROM / TO ── */
+    var col2 = 115;
+    secH('PRESTATAIRE', y);
+    secH('CLIENT', y + 0); // will offset by col2
+    doc.setFontSize(7.5); doc.setFont('helvetica','bold'); doc.setTextColor(130,120,180);
+    doc.text('CLIENT', col2, y);
+    y += 4;
 
-    /* Separator */
-    doc.setDrawColor(200, 195, 240); doc.setLineWidth(0.3);
-    doc.line(20, y, W - 20, y); y += 8;
+    doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(20,15,50);
+    doc.text('BOBE Florian', 20, y);
+    doc.text(data.contact || '—', col2, y);
+    y += 5;
 
-    /* Section: Commande */
-    doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(130,120,180);
-    doc.text('COMMANDE', 20, y); y += 6;
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(70,60,110);
+    doc.text('71 Boulevard Eug\u00e8ne Reguillon', 20, y);
+    if (data.discord) { doc.text('Discord : ' + data.discord, col2, y); }
+    y += 4.5;
+    doc.text('69100 Villeurbanne', 20, y); y += 4.5;
+    doc.text('T\u00e9l : 06.95.18.19.72', 20, y); y += 9;
 
-    var rows = [
-      ['Pack',         data.pack],
-      ['Titre',        data.title],
-      ['Format',       data.format],
-      ['Cadrage',      data.cadrage],
-      ['Personnages',  data.persos],
-      ['Fond',         data.bg],
+    sep(y); y += 8;
+
+    /* ── DÉTAILS DE LA COMMANDE ── */
+    secH('D\u00c9TAILS DE LA COMMANDE', y); y += 5;
+
+    var detailRows = [
+      ['Pack',          data.pack],
+      ['Titre du projet', data.title],
+      ['Format',        data.format],
+      ['Cadrage',       data.cadrage],
+      ['Personnages',   data.persos],
+      ['Fond',          data.bg],
       ['D\u00e9lai',    data.deadline],
-      ['Licence',      data.license],
-      ['NDA',          data.nda],
-      ['Google Drive', data.drive ? 'Lien fourni' : 'Non fourni']
+      ['Licence',       data.license],
+      ['NDA',           data.nda],
+      ['Google Drive',  data.drive ? 'Lien fourni' : 'Non fourni']
     ];
 
-    doc.setFontSize(10);
-    rows.forEach(function(r) {
-      doc.setFont('helvetica', 'bold'); doc.setTextColor(80, 70, 130);
+    doc.setFontSize(9);
+    detailRows.forEach(function(r) {
+      doc.setFont('helvetica','bold'); doc.setTextColor(80,70,130);
       doc.text(r[0], 20, y);
-      doc.setFont('helvetica', 'normal'); doc.setTextColor(30, 20, 60);
-      doc.text(String(r[1] || '—'), 70, y);
-      y += 6.5;
+      doc.setFont('helvetica','normal'); doc.setTextColor(30,20,60);
+      doc.text(String(r[1] || '\u2014'), 78, y);
+      y += 5.8;
     });
 
     if (data.desc) {
-      y += 2;
-      doc.setFont('helvetica', 'bold'); doc.setTextColor(80, 70, 130);
-      doc.text('Description', 20, y); y += 6;
-      doc.setFont('helvetica', 'normal'); doc.setTextColor(30, 20, 60);
+      y += 1;
+      doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(80,70,130);
+      doc.text('Description', 20, y); y += 4.5;
+      doc.setFont('helvetica','normal'); doc.setTextColor(50,40,90);
       var descLines = doc.splitTextToSize(data.desc, W - 40);
-      doc.text(descLines, 20, y);
-      y += descLines.length * 5.5 + 4;
+      var maxLines = Math.min(descLines.length, 6);
+      doc.text(descLines.slice(0, maxLines), 20, y);
+      y += maxLines * 4.8 + 2;
     }
 
-    y += 4;
-    doc.setDrawColor(200, 195, 240); doc.line(20, y, W - 20, y); y += 8;
+    y += 3; sep(y); y += 8;
 
-    /* Price box */
+    /* ── ESTIMATION ── */
     doc.setFillColor(240, 238, 255);
-    doc.roundedRect(20, y - 4, W - 40, 18, 3, 3, 'F');
-    doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(130,120,180);
-    doc.text('ESTIMATION', 26, y + 4);
-    doc.setFontSize(16); doc.setTextColor(26, 21, 53);
-    doc.text(data.price, W - 26, y + 5, { align:'right' });
-    doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor(160,150,200);
-    doc.text('Devis pr\u00e9cis confirm\u00e9 sous 48h \u00b7 Hors TVA', 26, y + 11);
-    y += 28;
+    doc.roundedRect(20, y-3, W-40, 16, 3, 3, 'F');
+    doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(130,120,180);
+    doc.text('ESTIMATION', 26, y+3.5);
+    doc.setFontSize(15); doc.setTextColor(26,21,53);
+    var finalPrice = (document.getElementById('finalPrice') || {value: data.price}).value.trim() || data.price;
+    doc.text(finalPrice, W-26, y+5, { align:'right' });
+    doc.setFontSize(7.5); doc.setFont('helvetica','normal'); doc.setTextColor(150,140,190);
+    doc.text('TVA non applicable \u2014 article 293\u00a0B du CGI', 26, y+10);
+    y += 24;
 
-    /* Payment methods */
-    doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(130,120,180);
-    doc.text('MOYENS DE PAIEMENT ACCEPT\u00c9S', 20, y); y += 6;
-    doc.setFont('helvetica', 'normal'); doc.setTextColor(60, 50, 100);
-    doc.setFontSize(10);
-    ['Virement bancaire (IBAN communiqu\u00e9 sur demande)', 'PayPal \u2014 contact@bobeflorian.com', 'Stripe \u2014 lien envoy\u00e9 apr\u00e8s approbation'].forEach(function(m) {
-      doc.text('\u2022  ' + m, 24, y); y += 6;
-    });
+    sep(y); y += 8;
 
-    /* Footer */
-    doc.setFillColor(26, 21, 53);
-    doc.rect(0, H - 22, W, 22, 'F');
-    doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor(167,139,250);
-    doc.text('\u00a9 ' + today.getFullYear() + ' Bobe Florian \u00b7 Digital Artist \u00b7 contact@bobeflorian.com', W/2, H - 10, { align:'center' });
+    /* ── DOMICILIATION BANCAIRE ── */
+    secH('DOMICILIATION BANCAIRE', y); y += 5;
+    doc.setFontSize(8.5); doc.setFont('helvetica','normal'); doc.setTextColor(50,40,90);
+    doc.text('Bobe Florian \u2014 Cr\u00e9dit Agricole des Savoie', 20, y); y += 4.5;
+    doc.text('12 Avenue des Alpes, 73000 Chamb\u00e9ry, France', 20, y); y += 4.5;
+    doc.setFont('helvetica','bold'); doc.setTextColor(30,20,60);
+    doc.text('IBAN : FR76 1810 6008 1096 7355 7824 058', 20, y); y += 4.5;
+    doc.text('BIC : AGRIFRPP881', 20, y); y += 10;
+
+    sep(y); y += 7;
+
+    /* ── CONDITIONS DE RÈGLEMENT ── */
+    secH('CONDITIONS DE R\u00c8GLEMENT', y); y += 5;
+    doc.setFontSize(8.5); doc.setFont('helvetica','normal'); doc.setTextColor(50,40,90);
+    doc.text('Date limite de r\u00e8glement : ' + dueDateStr + ' (30 jours apr\u00e8s facturation)', 20, y); y += 5;
+    doc.setFontSize(7); doc.setTextColor(120,110,160);
+    var legal = 'En cas de retard de paiement, p\u00e9nalit\u00e9s exigibles de plein droit au taux d\'int\u00e9r\u00eat l\u00e9gal de 0,12\u00a0% (LME n\u00b02008-776) et indemnit\u00e9 forfaitaire pour frais de recouvrement de 40\u00a0\u20ac (article D441-5 du Code de Commerce).';
+    var legalLines = doc.splitTextToSize(legal, W - 40);
+    doc.text(legalLines, 20, y);
+
+    /* ── FOOTER ── */
+    doc.setFillColor(26, 21, 53); doc.rect(0, H-20, W, 20, 'F');
+    doc.setFontSize(7.5); doc.setFont('helvetica','normal'); doc.setTextColor(167,139,250);
+    doc.text('\u00a9 ' + today.getFullYear() + ' Bobe Florian  \u00b7  Digital Artist  \u00b7  contact@bobeflorian.com  \u00b7  SIRET 907\u00a0494\u00a0173\u000020', W/2, H-8, { align:'center' });
 
     doc.save(invoiceNum + '.pdf');
-    showStatus('info', '&#128196; Facture <strong>' + invoiceNum + '.pdf</strong> t\u00e9l\u00e9charg\u00e9e \u2014 d\u00e9placez-la dans D:\\Work\\Commission\\Invoice\\');
+    if (document.getElementById('statusMsg')) showStatus('info', '&#128196; Devis <strong>' + invoiceNum + '.pdf</strong> t\u00e9l\u00e9charg\u00e9 \u2014 d\u00e9placez-le dans D:\\Work\\Commission\\Invoice\\');
   }
 
   function approveCommission() {
